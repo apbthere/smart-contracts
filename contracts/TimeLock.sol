@@ -3,10 +3,10 @@
 
 pragma solidity ^0.8.0;
 
-contract Timelock {
-    uint constant MINIMUM_DELAY = 10;
-    uint constant MAXIMUM_DELAY = 1 days;
-    uint constant GRACE_PERIOD = 1 days;
+contract TimeLock {
+    uint internal constant MINIMUM_DELAY = 10;
+    uint internal constant MAXIMUM_DELAY = 1 days;
+    uint internal constant GRACE_PERIOD = 1 days;
     address[] public owners;
     mapping(address => bool) public isOwner;
     string public message;
@@ -28,7 +28,7 @@ contract Timelock {
     mapping(bytes32 => bool) public queue;
 
     modifier onlyOwner() {
-        require(isOwner[msg.sender], "not an owner!");
+        require(isOwner[msg.sender], "Not an owner!");
         _;
     }
 
@@ -37,13 +37,13 @@ contract Timelock {
     event Executed(bytes32 txId);
 
     constructor(address[] memory _owners) {
-        require(_owners.length >= CONFIRMATIONS_REQUIRED, "not enough owners!");
+        require(_owners.length >= CONFIRMATIONS_REQUIRED, "Not enough owners!");
 
         for(uint i = 0; i < _owners.length; i++) {
             address nextOwner = _owners[i];
 
-            require(nextOwner != address(0), "cant have zero address as owner!");
-            require(!isOwner[nextOwner], "duplicate owner!");
+            require(nextOwner != address(0), "Can't have zero address as owner!");
+            require(!isOwner[nextOwner], "Duplicate owner!");
 
             isOwner[nextOwner] = true;
             owners.push(nextOwner);
@@ -53,14 +53,6 @@ contract Timelock {
     function demo(string calldata _msg) external payable {
         message = _msg;
         amount = msg.value;
-    }
-
-    function getNextTimestamp() external view returns(uint) {
-        return block.timestamp + 60;
-    }
-
-    function prepareData(string calldata _msg) external pure returns(bytes memory) {
-        return abi.encode(_msg);
     }
 
     function addToQueue(
@@ -73,7 +65,7 @@ contract Timelock {
         require(
             _timestamp > block.timestamp + MINIMUM_DELAY &&
             _timestamp < block.timestamp + MAXIMUM_DELAY,
-            "invalid timestamp"
+            "Invalid timestamp"
         );
         bytes32 txId = keccak256(abi.encode(
             _to,
@@ -83,7 +75,7 @@ contract Timelock {
             _timestamp
         ));
 
-        require(!queue[txId], "already queued");
+        require(!queue[txId], "Already queued");
 
         queue[txId] = true;
 
@@ -102,8 +94,8 @@ contract Timelock {
     }
 
     function confirm(bytes32 _txId) external onlyOwner {
-        require(queue[_txId], "not queued!");
-        require(!confirmations[_txId][msg.sender], "already confirmed!");
+        require(queue[_txId], "Not queued!");
+        require(!confirmations[_txId][msg.sender], "Already confirmed!");
 
         Transaction storage transaction = txs[_txId];
 
@@ -113,8 +105,8 @@ contract Timelock {
 
 
     function cancelConfirmation(bytes32 _txId) external onlyOwner {
-        require(queue[_txId], "not queued!");
-        require(confirmations[_txId][msg.sender], "not confirmed!");
+        require(queue[_txId], "Not queued!");
+        require(confirmations[_txId][msg.sender], "Not confirmed!");
 
         Transaction storage transaction = txs[_txId];
         transaction.confirmations--;
@@ -145,11 +137,11 @@ contract Timelock {
             _timestamp
         ));
 
-        require(queue[txId], "not queued!");
+        require(queue[txId], "Not queued!");
 
         Transaction storage transaction = txs[txId];
 
-        require(transaction.confirmations >= CONFIRMATIONS_REQUIRED, "not enough confirmations!");
+        require(transaction.confirmations >= CONFIRMATIONS_REQUIRED, "Not enough confirmations!");
 
         delete queue[txId];
 
@@ -166,14 +158,14 @@ contract Timelock {
         }
 
         (bool success, bytes memory resp) = _to.call{value: _value}(data);
-        require(success);
+        require(success, "Call failed");
 
         emit Executed(txId);
         return resp;
     }
 
     function discard(bytes32 _txId) external onlyOwner {
-        require(queue[_txId], "not queued");
+        require(queue[_txId], "Not queued!");
 
         delete queue[_txId];
 

@@ -200,6 +200,38 @@ describe("TimeLock", function () {
 
                 expect(await timelock.message()).to.be.equal("hello");
             })
+            it("Verify transaction sends funds", async function () {
+                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+
+                const tx = (await timelock.addToQueue(
+                    timelock.address,
+                    "demo(string)",
+                    DATA_VALUE,
+                    1000,
+                    nextTimestamp
+                ));
+
+                const txReceipt = await tx.wait();
+                const txId = txReceipt.logs[0].data;
+
+                await timelock.confirm(txId);
+                await timelock.connect(acc2).confirm(txId);
+                await timelock.connect(acc3).confirm(txId);
+
+                // produce the next block 
+                await network.provider.send("evm_increaseTime", [60]);
+                await network.provider.send("evm_mine");
+
+                await expect(await timelock.execute(
+                    timelock.address,
+                    "demo(string)",
+                    DATA_VALUE,
+                    1000,
+                    nextTimestamp,
+                    { value: ethers.utils.parseEther("0.5") }
+                )).to.changeEtherBalances([acc1, timelock], 
+                    [ethers.utils.parseEther("-0.5"), ethers.utils.parseEther("0.5")]);
+            })
 
             it("Verify transaction can be executed only after specified time", async function () {
                 const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;

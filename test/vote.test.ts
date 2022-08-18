@@ -1,20 +1,16 @@
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import { Vote } from "../typechain/Vote";
-import { VoterToken } from "../typechain/VoterToken";
 
 describe("Vote", function () {
-  let acc1: Signer
-  let acc2: Signer
-  let voter: Vote
-  let votertoken: VoterToken
-
-  beforeEach(async function () {
-    [acc1, acc2] = await ethers.getSigners();
+  // We define a fixture to reuse the same setup in every test.
+  // We use loadFixture to run this setup once, snapshot that state,
+  // and reset Hardhat Network to that snapshot in every test.
+  async function deployVoteFixture() {
+    const [acc1, acc2] = await ethers.getSigners();
 
     const VoterToken = await ethers.getContractFactory("VoterToken", acc1);
-    votertoken = await VoterToken.deploy();
+    const votertoken = await VoterToken.deploy();
     await votertoken.deployed();
 
     const mintTx = await votertoken.safeMint(await acc1.getAddress());
@@ -25,7 +21,7 @@ describe("Vote", function () {
     const endTime = (await ethers.provider.getBlock("latest")).timestamp + 60 * 60 * 24;
 
     const Vote = await ethers.getContractFactory("Vote", acc1);
-    voter = await Vote.deploy(votertoken.address, startTime, endTime);
+    const voter = await Vote.deploy(votertoken.address, startTime, endTime);
     await voter.deployed();
 
     const choice1Tx = await voter.addChoice("Election", "Bob");
@@ -39,10 +35,14 @@ describe("Vote", function () {
     const choice3Tx = await voter.addChoice("Election", "Alex");
     // wait until the transaction is mined
     await choice3Tx.wait();
-  })
+
+    return { acc1, acc2, voter, votertoken };
+  }
 
   describe("Contract", function () {
     it("Verify contract can't be deploy if end time is before start time", async function () {
+      const { acc1, votertoken } = await loadFixture(deployVoteFixture);
+
       const startTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 23;
       const endTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 24;
 
@@ -53,22 +53,28 @@ describe("Vote", function () {
   });
 
   it("Verify only admin can add choices", async function () {
+    const { acc2, voter } = await loadFixture(deployVoteFixture);
+
     await expect(voter.connect(acc2).addChoice("Election", "Bob")).to.be
       .revertedWith('Unathorized');
   })
 
   it("Verify choices are unique", async function () {
+    const { voter } = await loadFixture(deployVoteFixture);
+
     await expect(voter.addChoice("Election", "Bob")).to.be
       .revertedWith('Duplicate choice');
   })
 
   describe("vote", function () {
     it("Verify voter can only vote after the election begins", async function () {
+      const { acc1, votertoken } = await loadFixture(deployVoteFixture);
+
       const startTime = (await ethers.provider.getBlock("latest")).timestamp + 60 * 10;
       const endTime = (await ethers.provider.getBlock("latest")).timestamp + 60 * 60 * 24;
 
       const Vote = await ethers.getContractFactory("Vote", acc1);
-      voter = await Vote.deploy(votertoken.address, startTime, endTime);
+      const voter = await Vote.deploy(votertoken.address, startTime, endTime);
       await voter.deployed();
 
       await expect(voter.vote("Election", "Alex")).to.be
@@ -76,11 +82,13 @@ describe("Vote", function () {
     });
 
     it("Verify voter can only vote before the election ends", async function () {
+      const { acc1, votertoken } = await loadFixture(deployVoteFixture);
+
       const startTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 23;
       const endTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 22;
 
       const Vote = await ethers.getContractFactory("Vote", acc1);
-      voter = await Vote.deploy(votertoken.address, startTime, endTime);
+      const voter = await Vote.deploy(votertoken.address, startTime, endTime);
       await voter.deployed();
 
       await expect(voter.vote("Election", "Alex")).to.be
@@ -88,12 +96,16 @@ describe("Vote", function () {
     });
 
     it("verify vote emits event", async function () {
+      const { acc1, voter } = await loadFixture(deployVoteFixture);
+
       await expect(voter.connect(acc1).vote("Election", "Alex"))
         .to.emit(voter, 'Voted')
         .withArgs("Election", "Alex");
     });
 
     it("verify registered voters can vote", async function () {
+      const { acc1, voter } = await loadFixture(deployVoteFixture);
+
       expect(await voter.getCurrentVotes("Election", "Alex")).to.equal(0);
 
       const voteTx = await voter.connect(acc1).vote("Election", "Alex");
@@ -103,16 +115,22 @@ describe("Vote", function () {
     });
 
     it("verify only registered voters can vote 1", async function () {
+      const { acc2, voter } = await loadFixture(deployVoteFixture);
+
       await expect(voter.connect(acc2).vote("Election", "Alex")).to.be
         .revertedWith('Not a registered voter');
     });
 
     it("Should only allow voting for known choices", async function () {
+      const { acc1, voter } = await loadFixture(deployVoteFixture);
+
       await expect(voter.connect(acc1).vote("Election", "Joe")).to.be
         .revertedWith('Invalid choice');
     });
 
     it("Should declare Alex a winner", async function () {
+      const { acc1, acc2, voter, votertoken } = await loadFixture(deployVoteFixture);
+
       const voteTx = await voter.connect(acc1).vote("Election", "Alex");
       await voteTx.wait();
 
@@ -127,6 +145,8 @@ describe("Vote", function () {
     });
 
     it("Should prevent duplicate voting", async function () {
+      const { acc1, voter } = await loadFixture(deployVoteFixture);
+
       const voteTx = await voter.connect(acc1).vote("Election", "Bob");
       await voteTx.wait();
 
@@ -135,6 +155,8 @@ describe("Vote", function () {
     });
 
     it("Should not find a winner", async function () {
+      const { voter } = await loadFixture(deployVoteFixture);
+
       expect(await voter.getWinner("Election")).to.be.empty;
     });
   });

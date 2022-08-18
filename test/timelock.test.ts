@@ -1,28 +1,27 @@
+import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { Signer } from "ethers";
-import { ethers, network } from "hardhat";
-import { TimeLock } from "../typechain";
+import { ethers } from "hardhat";
 
 describe("TimeLock", function () {
     // encoded 'hello' string
     const DATA_VALUE = "0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000568656c6c6f000000000000000000000000000000000000000000000000000000"
-    let acc1: Signer
-    let acc2: Signer
-    let acc3: Signer
-    let acc4: Signer
-    let timelock: TimeLock
 
-    beforeEach(async function () {
-        [acc1, acc2, acc3, acc4] = await ethers.getSigners();
+    // We define a fixture to reuse the same setup in every test.
+    // We use loadFixture to run this setup once, snapshot that state,
+    // and reset Hardhat Network to that snapshot in every test.
+    async function deployTimeLockFixture() {
+        const [acc1, acc2, acc3, acc4] = await ethers.getSigners();
 
         const TimeLockFactory = await ethers.getContractFactory("TimeLock", acc1);
-        timelock = await TimeLockFactory.deploy([await acc1.getAddress(), await acc2.getAddress(), await acc3.getAddress()]);
+        const timelock = await TimeLockFactory.deploy([await acc1.getAddress(), await acc2.getAddress(), await acc3.getAddress()]);
         await timelock.deployed();
-    })
+
+        return { acc1, acc2, acc3, acc4, timelock };
+    }
 
     describe("Contract", function () {
         it("Verify contract can't be deploied if not enough owners", async function () {
-            [acc1, acc2] = await ethers.getSigners();
+            const [acc1, acc2] = await ethers.getSigners();
 
             const TimeLockFactory = await ethers.getContractFactory("TimeLock", acc1);
             await expect(TimeLockFactory.deploy([await acc1.getAddress(), await acc2.getAddress()]))
@@ -31,18 +30,18 @@ describe("TimeLock", function () {
         })
 
         it("Verify contract can't be deploied if 0 address is provided as an owner", async function () {
-            [acc1, acc2] = await ethers.getSigners();
+            const [acc1, acc2] = await ethers.getSigners();
 
             const TimeLockFactory = await ethers.getContractFactory("TimeLock", acc1);
-            await expect(TimeLockFactory.deploy([await acc1.getAddress(), 
-                                                await acc2.getAddress(), 
-                                                ethers.constants.AddressZero]))
+            await expect(TimeLockFactory.deploy([await acc1.getAddress(),
+            await acc2.getAddress(),
+            ethers.constants.AddressZero]))
                 .to.be
                 .revertedWith("Can't have zero address as owner!");
         })
 
         it("Verify contract can't be deploied if duplicate owners", async function () {
-            [acc1, acc2] = await ethers.getSigners();
+            const [acc1, acc2] = await ethers.getSigners();
 
             const TimeLockFactory = await ethers.getContractFactory("TimeLock", acc1);
             await expect(TimeLockFactory.deploy([await acc1.getAddress(), await acc2.getAddress(), await acc2.getAddress()]))
@@ -52,7 +51,9 @@ describe("TimeLock", function () {
 
         describe("addToQueue", function () {
             it("Verify transaction can be added", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 await expect(timelock.addToQueue(
                     timelock.address,
@@ -65,7 +66,9 @@ describe("TimeLock", function () {
             })
 
             it("Verify transaction can only be added by owner", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { acc4, timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 await expect(timelock.connect(acc4).addToQueue(
                     timelock.address,
@@ -77,7 +80,9 @@ describe("TimeLock", function () {
             })
 
             it("Verify transaction timestamp must be in the future", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest());
 
                 await expect(timelock.addToQueue(
                     timelock.address,
@@ -89,7 +94,9 @@ describe("TimeLock", function () {
             })
 
             it("Verify transaction timestamp must be less then current block timestamp + MAXIMUM_DELAY", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 720000;
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 720000;
 
                 await expect(timelock.addToQueue(
                     timelock.address,
@@ -101,7 +108,9 @@ describe("TimeLock", function () {
             })
 
             it("Verify transaction can be added only once", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 await expect(timelock.addToQueue(
                     timelock.address,
@@ -124,7 +133,9 @@ describe("TimeLock", function () {
 
         describe("confirm", function () {
             it("Verify transaction can be confirmed", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -141,12 +152,16 @@ describe("TimeLock", function () {
             })
 
             it("Verify only scheduled transactions can be confirmed", async function () {
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
                 await expect(timelock.confirm('0xa6cc05b415758ffca81a29998f7815b735be3d80d2546b7dc1afb6c19ddf3b48'))
                     .to.be.revertedWith('Not queued!');
             })
 
             it("Verify transaction can only be confirmed once", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -168,7 +183,9 @@ describe("TimeLock", function () {
 
         describe("execute", function () {
             it("Verify transaction can be executed", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { acc2, acc3, timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -185,9 +202,8 @@ describe("TimeLock", function () {
                 await timelock.connect(acc2).confirm(txId);
                 await timelock.connect(acc3).confirm(txId);
 
-                // produce the next block 
-                await network.provider.send("evm_increaseTime", [60]);
-                await network.provider.send("evm_mine");
+                // We can increase the time in Hardhat Network
+                await time.increase(60);
 
                 await expect(timelock.execute(
                     timelock.address,
@@ -201,7 +217,9 @@ describe("TimeLock", function () {
                 expect(await timelock.message()).to.be.equal("hello");
             })
             it("Verify transaction sends funds", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { acc1, acc2, acc3, timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -218,9 +236,8 @@ describe("TimeLock", function () {
                 await timelock.connect(acc2).confirm(txId);
                 await timelock.connect(acc3).confirm(txId);
 
-                // produce the next block 
-                await network.provider.send("evm_increaseTime", [60]);
-                await network.provider.send("evm_mine");
+                // We can increase the time in Hardhat Network
+                await time.increase(60);
 
                 await expect(await timelock.execute(
                     timelock.address,
@@ -229,12 +246,14 @@ describe("TimeLock", function () {
                     1000,
                     nextTimestamp,
                     { value: ethers.utils.parseEther("0.5") }
-                )).to.changeEtherBalances([acc1, timelock], 
+                )).to.changeEtherBalances([acc1, timelock],
                     [ethers.utils.parseEther("-0.5"), ethers.utils.parseEther("0.5")]);
             })
 
             it("Verify transaction can be executed only after specified time", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { acc2, acc3, timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -250,10 +269,6 @@ describe("TimeLock", function () {
                 await timelock.confirm(txId);
                 await timelock.connect(acc2).confirm(txId);
                 await timelock.connect(acc3).confirm(txId);
-
-                // produce the next block 
-                //              await network.provider.send("evm_increaseTime", [60]);
-                //              await network.provider.send("evm_mine");
 
                 await expect(timelock.execute(
                     timelock.address,
@@ -266,7 +281,9 @@ describe("TimeLock", function () {
             })
 
             it("Verify transaction can be executed only before specified time", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { acc2, acc3, timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -283,9 +300,8 @@ describe("TimeLock", function () {
                 await timelock.connect(acc2).confirm(txId);
                 await timelock.connect(acc3).confirm(txId);
 
-                // produce the next block 
-                await network.provider.send("evm_increaseTime", [600000]);
-                await network.provider.send("evm_mine");
+                // We can increase the time in Hardhat Network
+                await time.increase(600000);
 
                 await expect(timelock.execute(
                     timelock.address,
@@ -298,11 +314,12 @@ describe("TimeLock", function () {
             })
 
             it("Verify that only queued transaction can be executed", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { timelock } = await loadFixture(deployTimeLockFixture);
 
-                // produce the next block 
-                await network.provider.send("evm_increaseTime", [60]);
-                await network.provider.send("evm_mine");
+                const nextTimestamp = (await time.latest()) + 60;
+
+                // We can increase the time in Hardhat Network
+                await time.increase(60);
 
                 await expect(timelock.execute(
                     timelock.address,
@@ -315,7 +332,9 @@ describe("TimeLock", function () {
             })
 
             it("Verify transaction can be executed only after receiving enough confirmations", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { acc2, timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -331,9 +350,8 @@ describe("TimeLock", function () {
                 await timelock.confirm(txId);
                 await timelock.connect(acc2).confirm(txId);
 
-                // produce the next block 
-                await network.provider.send("evm_increaseTime", [60]);
-                await network.provider.send("evm_mine");
+                // We can increase the time in Hardhat Network
+                await time.increase(60);
 
                 await expect(timelock.execute(
                     timelock.address,
@@ -346,7 +364,9 @@ describe("TimeLock", function () {
             })
 
             it("Verify transaction can be executed without function", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { acc2, acc3, timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -363,9 +383,8 @@ describe("TimeLock", function () {
                 await timelock.connect(acc2).confirm(txId);
                 await timelock.connect(acc3).confirm(txId);
 
-                // produce the next block 
-                await network.provider.send("evm_increaseTime", [60]);
-                await network.provider.send("evm_mine");
+                // We can increase the time in Hardhat Network
+                await time.increase(60);
 
                 await expect(timelock.execute(
                     timelock.address,
@@ -380,7 +399,9 @@ describe("TimeLock", function () {
 
         describe("cancelConfirmation", function () {
             it("Verify transaction confirmation can be canceled", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -399,12 +420,16 @@ describe("TimeLock", function () {
             })
 
             it("Verify that only queued transactions can be canceled", async function () {
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
                 await expect(timelock.cancelConfirmation('0xa6cc05b415758ffca81a29998f7815b735be3d80d2546b7dc1afb6c19ddf3b48'))
                     .to.be.revertedWith('Not queued!');
             })
 
             it("Verify that only confirmed transactions can be canceled", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -424,7 +449,9 @@ describe("TimeLock", function () {
 
         describe("discard", function () {
             it("Verify transaction can be discarded", async function () {
-                const nextTimestamp = (await ethers.provider.getBlock("latest")).timestamp + 60;
+                const { timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
 
                 const tx = (await timelock.addToQueue(
                     timelock.address,
@@ -443,6 +470,8 @@ describe("TimeLock", function () {
         })
 
         it("Verify only queued transaction can be discarded", async function () {
+            const { timelock } = await loadFixture(deployTimeLockFixture);
+
             await expect(timelock.discard('0xa6cc05b415758ffca81a29998f7815b735be3d80d2546b7dc1afb6c19ddf3b48'))
                 .to.be.revertedWith('Not queued!');
         })

@@ -10,12 +10,6 @@ contract Vote {
     mapping (address => mapping (string => bool)) private voted;
     mapping (string => mapping (string => bool)) private ballot;
 
-    struct Choices {
-        string section;
-        string choice;
-    }
-    Choices[] private ballotItems;
-
     mapping (string => string) private winners;
 
     uint private immutable startTime;
@@ -47,8 +41,6 @@ contract Vote {
         require(!ballot[section][choice], "Duplicate choice");
 
         ballot[section][choice] = true;
-
-        ballotItems.push(Choices(section, choice));
     }
 
     function vote(string calldata section, string calldata choice) external registered {

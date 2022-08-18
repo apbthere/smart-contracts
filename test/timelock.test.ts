@@ -239,15 +239,16 @@ describe("TimeLock", function () {
                 // We can increase the time in Hardhat Network
                 await time.increase(60);
 
+                const ethAmount = ethers.utils.parseEther("0.5");
                 await expect(await timelock.execute(
                     timelock.address,
                     "demo(string)",
                     DATA_VALUE,
                     1000,
                     nextTimestamp,
-                    { value: ethers.utils.parseEther("0.5") }
+                    { value: ethAmount }
                 )).to.changeEtherBalances([acc1, timelock],
-                    [ethers.utils.parseEther("-0.5"), ethers.utils.parseEther("0.5")]);
+                    [ethers.utils.parseEther("-0.5"), ethAmount]);
             })
 
             it("Verify transaction can be executed only after specified time", async function () {

@@ -1,8 +1,7 @@
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import { Vote } from "../typechain/Vote";
-import { VoterToken } from "../typechain/VoterToken";
+import { VoterToken } from "../typechain";
 
 describe("VoterToken", function () {
   let acc1: Signer

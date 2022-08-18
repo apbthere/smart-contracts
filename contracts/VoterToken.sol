@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-/// Requested operation is not supported. 
+/// Requested operation is not supported.
 error NotSupported();
 
 contract VoterToken is ERC721, ERC721Burnable, Ownable {
@@ -25,7 +25,7 @@ contract VoterToken is ERC721, ERC721Burnable, Ownable {
     /**
      * @dev See {IERC721-approve}.
      */
-    function approve(address, uint256) public override {
+    function approve(address, uint256) public pure override {
         revert NotSupported();
     }
 
@@ -36,11 +36,11 @@ contract VoterToken is ERC721, ERC721Burnable, Ownable {
         address,
         address,
         uint256
-    ) public override {
+    ) public pure override {
         revert NotSupported();
     }
 
-     /**
+    /**
      * @dev See {IERC721-safeTransferFrom}.
      */
     function safeTransferFrom(
@@ -48,25 +48,25 @@ contract VoterToken is ERC721, ERC721Burnable, Ownable {
         address,
         uint256,
         bytes memory
-    ) public override {
+    ) public pure override {
         revert NotSupported();
     }
 
-      /**
+    /**
      * @dev See {IERC721-setApprovalForAll}.
      */
-    function setApprovalForAll(address, bool) public override {
+    function setApprovalForAll(address, bool) public pure override {
         revert NotSupported();
     }
 
-       /**
+    /**
      * @dev See {IERC721-transferFrom}.
      */
     function transferFrom(
         address,
         address,
         uint256
-    ) public override {
+    ) public pure override {
         revert NotSupported();
     }
 }

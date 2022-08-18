@@ -17,12 +17,12 @@ describe("Vote", function () {
     votertoken = await VoterToken.deploy();
     await votertoken.deployed();
 
-        const mintTx = await votertoken.safeMint(await acc1.getAddress());
+    const mintTx = await votertoken.safeMint(await acc1.getAddress());
     // wait until the transaction is mined
     await mintTx.wait();
 
     const startTime = (await ethers.provider.getBlock("latest")).timestamp - 1;
-    const endTime = (await ethers.provider.getBlock("latest")).timestamp + 60*60*24;
+    const endTime = (await ethers.provider.getBlock("latest")).timestamp + 60 * 60 * 24;
 
     const Vote = await ethers.getContractFactory("Vote", acc1);
     voter = await Vote.deploy(votertoken.address, startTime, endTime);
@@ -43,9 +43,9 @@ describe("Vote", function () {
 
   describe("Contract", function () {
     it("Verify contract can't be deploy if end time is before start time", async function () {
-      const startTime = (await ethers.provider.getBlock("latest")).timestamp - 60*60*23;
-      const endTime = (await ethers.provider.getBlock("latest")).timestamp - 60*60*24;
-  
+      const startTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 23;
+      const endTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 24;
+
       const Vote = await ethers.getContractFactory("Vote", acc1);
       await expect(Vote.deploy(votertoken.address, startTime, endTime)).to.be
         .revertedWith("startTime must be before endTime");
@@ -64,24 +64,24 @@ describe("Vote", function () {
 
   describe("vote", function () {
     it("Verify voter can only vote after the election begins", async function () {
-      const startTime = (await ethers.provider.getBlock("latest")).timestamp + 60*10;
-      const endTime = (await ethers.provider.getBlock("latest")).timestamp + 60*60*24;
-  
+      const startTime = (await ethers.provider.getBlock("latest")).timestamp + 60 * 10;
+      const endTime = (await ethers.provider.getBlock("latest")).timestamp + 60 * 60 * 24;
+
       const Vote = await ethers.getContractFactory("Vote", acc1);
       voter = await Vote.deploy(votertoken.address, startTime, endTime);
-      await voter.deployed();   
+      await voter.deployed();
 
       await expect(voter.vote("Election", "Alex")).to.be
         .revertedWith('Election has not started yet.');
     });
 
     it("Verify voter can only vote before the election ends", async function () {
-      const startTime = (await ethers.provider.getBlock("latest")).timestamp - 60*60*23;
-      const endTime = (await ethers.provider.getBlock("latest")).timestamp - 60*60*22;
-  
+      const startTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 23;
+      const endTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 22;
+
       const Vote = await ethers.getContractFactory("Vote", acc1);
       voter = await Vote.deploy(votertoken.address, startTime, endTime);
-      await voter.deployed();   
+      await voter.deployed();
 
       await expect(voter.vote("Election", "Alex")).to.be
         .revertedWith('Election has ended.');
@@ -116,7 +116,14 @@ describe("Vote", function () {
       const voteTx = await voter.connect(acc1).vote("Election", "Alex");
       await voteTx.wait();
 
-      expect(await voter.getCurrentWinner("Election")).to.equal("Alex");
+      const mintTx = await votertoken.safeMint(await acc2.getAddress());
+      // wait until the transaction is mined
+      await mintTx.wait();
+
+      const voteTx2 = await voter.connect(acc2).vote("Election", "Bob");
+      await voteTx2.wait();
+
+      expect(await voter.getWinner("Election")).to.equal("Alex");
     });
 
     it("Should prevent duplicate voting", async function () {
@@ -128,10 +135,7 @@ describe("Vote", function () {
     });
 
     it("Should not find a winner", async function () {
-      const voteTx = await voter.connect(acc1).vote("Election", "Alex");
-      await voteTx.wait();
-
-      expect(await voter.getCurrentWinner("Election2")).to.equal("");
+      expect(await voter.getWinner("Election")).to.be.empty;
     });
   });
 

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers, network } from "hardhat";
-import { TimeLock } from "../typechain/TimeLock";
+import { TimeLock } from "../typechain";
 
 describe("TimeLock", function () {
     // encoded 'hello' string

@@ -16,6 +16,8 @@ contract Vote {
     }
     Choices[] private ballotItems;
 
+    mapping (string => string) private winners;
+
     uint private immutable startTime;
     uint private immutable endTime;
 
@@ -61,6 +63,11 @@ contract Vote {
         voted[msg.sender][section] = true;
 
         emit Voted(section, choice);
+
+        // is this a new front runner?
+        if (tally[section][choice] > tally[section][winners[section]]) {
+            winners[section] = choice;
+        }
     }
 
     function getCurrentVotes(string calldata section, string calldata choice) 
@@ -70,22 +77,10 @@ contract Vote {
         return tally[section][choice];
     }
 
-    function getCurrentWinner(string calldata section) 
+    function getWinner(string calldata section) 
     external
     view 
     returns (string memory) {
-        bytes32 sectionHash = keccak256(abi.encodePacked(section));
-        uint winnerScore;
-        string memory winner;
-
-        for (uint i; i < ballotItems.length; i++) {
-            if (sectionHash == keccak256(abi.encodePacked(ballotItems[i].section))) {
-                if (tally[section][ballotItems[i].choice] > winnerScore) {
-                    winnerScore = tally[section][ballotItems[i].choice];
-                    winner = ballotItems[i].choice;
-                }
-            }
-        }
-        return winner;
+        return winners[section];
     }
 }

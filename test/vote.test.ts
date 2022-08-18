@@ -1,4 +1,4 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
@@ -17,8 +17,8 @@ describe("Vote", function () {
     // wait until the transaction is mined
     await mintTx.wait();
 
-    const startTime = (await ethers.provider.getBlock("latest")).timestamp - 1;
-    const endTime = (await ethers.provider.getBlock("latest")).timestamp + 60 * 60 * 24;
+    const startTime = (await time.latest()) - 1;
+    const endTime = (await time.latest()) + 60 * 60 * 24;
 
     const Vote = await ethers.getContractFactory("Vote", acc1);
     const voter = await Vote.deploy(votertoken.address, startTime, endTime);
@@ -43,8 +43,8 @@ describe("Vote", function () {
     it("Verify contract can't be deploy if end time is before start time", async function () {
       const { acc1, votertoken } = await loadFixture(deployVoteFixture);
 
-      const startTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 23;
-      const endTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 24;
+      const startTime = (await time.latest()) - 60 * 60 * 23;
+      const endTime = (await time.latest()) - 60 * 60 * 24;
 
       const Vote = await ethers.getContractFactory("Vote", acc1);
       await expect(Vote.deploy(votertoken.address, startTime, endTime)).to.be
@@ -70,8 +70,8 @@ describe("Vote", function () {
     it("Verify voter can only vote after the election begins", async function () {
       const { acc1, votertoken } = await loadFixture(deployVoteFixture);
 
-      const startTime = (await ethers.provider.getBlock("latest")).timestamp + 60 * 10;
-      const endTime = (await ethers.provider.getBlock("latest")).timestamp + 60 * 60 * 24;
+      const startTime = (await time.latest()) + 60 * 10;
+      const endTime = (await time.latest()) + 60 * 60 * 24;
 
       const Vote = await ethers.getContractFactory("Vote", acc1);
       const voter = await Vote.deploy(votertoken.address, startTime, endTime);
@@ -84,8 +84,8 @@ describe("Vote", function () {
     it("Verify voter can only vote before the election ends", async function () {
       const { acc1, votertoken } = await loadFixture(deployVoteFixture);
 
-      const startTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 23;
-      const endTime = (await ethers.provider.getBlock("latest")).timestamp - 60 * 60 * 22;
+      const startTime = (await time.latest()) - 60 * 60 * 23;
+      const endTime = (await time.latest()) - 60 * 60 * 22;
 
       const Vote = await ethers.getContractFactory("Vote", acc1);
       const voter = await Vote.deploy(votertoken.address, startTime, endTime);

@@ -15,9 +15,6 @@ contract TimeLock {
 
     struct Transaction {
         bytes32 uid;
-        address to;
-        uint value;
-        bytes data;
         bool executed;
         uint confirmations;
     }
@@ -81,9 +78,6 @@ contract TimeLock {
 
         txs[txId] = Transaction({
             uid: txId,
-            to: _to,
-            value: _value,
-            data: _data,
             executed: false,
             confirmations: 0
         });

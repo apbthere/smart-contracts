@@ -175,8 +175,6 @@ describe("Vote", function () {
 
       const votes = await voter.getAllVotes("Election");
 
-      console.log(votes);
-
       expect(votes).to.have.lengthOf(2);
       expect(votes[0]).to.include.members(["Alex", "Bob", "Dick"]);
 

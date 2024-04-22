@@ -159,6 +159,35 @@ describe("Vote", function () {
 
       expect(await voter.getWinner("Election")).to.be.empty;
     });
+
+    it("Should return all votes", async function () {
+       const { acc1, acc2, voter, votertoken } = await loadFixture(deployVoteFixture);
+
+      const voteTx = await voter.connect(acc1).vote("Election", "Alex");
+      await voteTx.wait();
+
+      const mintTx = await votertoken.safeMint(await acc2.getAddress());
+      // wait until the transaction is mined
+      await mintTx.wait();
+
+      const voteTx2 = await voter.connect(acc2).vote("Election", "Bob");
+      await voteTx2.wait();
+
+      const votes = await voter.getAllVotes("Election");
+
+      console.log(votes);
+
+      expect(votes).to.have.lengthOf(2);
+      expect(votes[0]).to.include.members(["Alex", "Bob", "Dick"]);
+
+      const bobIndex = votes[0].findIndex((vote) => vote === "Bob");
+      const alexIndex = votes[0].findIndex((vote) => vote === "Alex");
+      const dickIndex = votes[0].findIndex((vote) => vote === "Dick");
+
+      expect(votes[1][bobIndex]).to.be.equal(1);
+      expect(votes[1][alexIndex]).to.be.equal(1);
+      expect(votes[1][dickIndex]).to.be.equal(0);
+    });
   });
 
 });

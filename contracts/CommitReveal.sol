@@ -9,7 +9,7 @@ contract CommitReveal is Ownable {
     bool votingStopped;
 
     event CommitmentMade(bytes32 commitment);
-    event Reveal(bytes32 value);
+    event Reveal(address indexed addr, Moves indexed move);
 
     enum Moves {None, Rock, Paper, Scissors}
    
@@ -33,7 +33,7 @@ contract CommitReveal is Ownable {
 
         votes[msg.sender] = _move;
 
-        emit Reveal(commit);
+        emit Reveal(msg.sender, votes[msg.sender]);
     }
  
     function stopVoting() external onlyOwner {

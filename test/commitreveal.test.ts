@@ -26,6 +26,8 @@ describe("CommitReveal", function () {
         const address = await acc1.getAddress();
         const hash = ethers.utils.solidityKeccak256(["uint8", "bytes32", "address"], [1, secret, address]);
 
+        console.log(hash);
+
         const commitTx = await commitreveal.commitVote(hash);
         // wait until the transaction is mined
         await commitTx.wait();

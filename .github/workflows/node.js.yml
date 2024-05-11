@@ -3,6 +3,10 @@
 
 name: Node.js CI
 
+env:
+  DEPLOY_KEY_RINKEBY: ${{ secrets.DEPLOY_KEY_RINKEBY }}
+  DEPLOY_ACC_RINKEBY: ${{ secrets.DEPLOY_ACC_RINKEBY }}
+  ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
 on:
   push:
     branches: [ "master" ]

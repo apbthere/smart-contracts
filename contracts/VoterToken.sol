@@ -25,18 +25,14 @@ contract VoterToken is ERC721, ERC721Burnable, Ownable {
     /**
      * @dev See {IERC721-approve}.
      */
-    function approve(address, uint256) public override {
+    function approve(address, uint256) public pure override {
         revert NotSupported();
     }
 
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
-    function safeTransferFrom(
-        address,
-        address,
-        uint256
-    ) public override {
+    function safeTransferFrom(address, address, uint256) public pure override {
         revert NotSupported();
     }
 
@@ -55,18 +51,14 @@ contract VoterToken is ERC721, ERC721Burnable, Ownable {
     /**
      * @dev See {IERC721-setApprovalForAll}.
      */
-    function setApprovalForAll(address, bool) public override {
+    function setApprovalForAll(address, bool) public pure override {
         revert NotSupported();
     }
 
     /**
      * @dev See {IERC721-transferFrom}.
      */
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) public override {
+    function transferFrom(address, address, uint256) public pure override {
         revert NotSupported();
     }
 }

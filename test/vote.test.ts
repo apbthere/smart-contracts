@@ -178,9 +178,9 @@ describe("Vote", function () {
       expect(votes).to.have.lengthOf(2);
       expect(votes[0]).to.include.members(["Alex", "Bob", "Dick"]);
 
-      const bobIndex = votes[0].findIndex((vote) => vote === "Bob");
-      const alexIndex = votes[0].findIndex((vote) => vote === "Alex");
-      const dickIndex = votes[0].findIndex((vote) => vote === "Dick");
+      const bobIndex = votes[0].findIndex((vote: string) => vote === "Bob");
+      const alexIndex = votes[0].findIndex((vote: string) => vote === "Alex");
+      const dickIndex = votes[0].findIndex((vote: string) => vote === "Dick");
 
       expect(votes[1][bobIndex]).to.be.equal(1);
       expect(votes[1][alexIndex]).to.be.equal(1);

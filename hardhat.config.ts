@@ -34,6 +34,10 @@ const config: HardhatUserConfig = {
       url: process.env.DEPLOY_KEY_RINKEBY,
       accounts: process.env.DEPLOY_ACC_RINKEBY !== undefined ? [process.env.DEPLOY_ACC_RINKEBY]: [],
     },
+    base: {
+      url: process.env.BASE_MAINNET_URL || "",
+      accounts: process.env.BASE_PRIVATE_KEY !== undefined ? [process.env.BASE_PRIVATE_KEY] : [],
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -41,6 +45,16 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
+    customChains: [
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
+        },
+      },
+    ],
   },
 };
 

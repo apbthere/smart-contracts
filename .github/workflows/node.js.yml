@@ -31,5 +31,13 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
+    - name: Install Slither
+      run: |
+        sudo apt-get update
+        sudo apt-get install python3-pip -y
+        pip3 install slither-analyzer
+    - name: Run Slither
+      run: |
+        slither contracts/
     - name: Run Tests
       run: npx hardhat test

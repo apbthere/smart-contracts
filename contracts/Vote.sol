@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 contract Vote {
-    address private owner;
+    address private immutable owner;
     ERC721 private immutable voterRoll;
     mapping(string => mapping(string => uint)) private tally;
     mapping(address => mapping(string => bool)) private voted;

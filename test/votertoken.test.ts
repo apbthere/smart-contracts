@@ -32,6 +32,13 @@ describe("VoterToken", function () {
     expect(await votertoken.balanceOf(await acc2.getAddress())).to.equal(0);
   });
 
+  it("should revert when non-owner tries to mint", async function () {
+    const { votertoken, acc2 } = await loadFixture(deployVoterTokenFixture);
+    await expect(votertoken.connect(acc2).safeMint(await acc2.getAddress())).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );
+  });
+
   describe("transferFrom", function () {
     it("transferFrom is not supported", async function () {
       const { votertoken, acc1, acc2 } = await loadFixture(deployVoterTokenFixture);

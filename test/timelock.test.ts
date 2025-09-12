@@ -151,6 +151,21 @@ describe("TimeLock", function () {
                 await timelock.confirm(txId);
             })
 
+            it("Verify transaction can only be confirmed by owner", async function () {
+                const { acc4, timelock } = await loadFixture(deployTimeLockFixture);
+                const nextTimestamp = (await time.latest()) + 60;
+                const tx = await timelock.addToQueue(
+                    timelock.address,
+                    "demo(string)",
+                    DATA_VALUE,
+                    1000,
+                    nextTimestamp
+                );
+                const txReceipt = await tx.wait();
+                const txId = txReceipt.logs[0].data;
+                await expect(timelock.connect(acc4).confirm(txId)).to.be.revertedWith('Not an owner!');
+            });
+
             it("Verify only scheduled transactions can be confirmed", async function () {
                 const { timelock } = await loadFixture(deployTimeLockFixture);
 
@@ -428,6 +443,38 @@ describe("TimeLock", function () {
                     { value: ethers.utils.parseEther("0.5") }
                 )).to.emit(timelock, 'Executed');
             })
+
+                it("Verify transaction cannot be executed with zero address as target", async function () {
+                    const { acc2, acc3, timelock } = await loadFixture(deployTimeLockFixture);
+
+                    const nextTimestamp = (await time.latest()) + 60;
+
+                    const tx = (await timelock.addToQueue(
+                        ethers.constants.AddressZero,
+                        "demo(string)",
+                        DATA_VALUE,
+                        1000,
+                        nextTimestamp
+                    ));
+
+                    const txReceipt = await tx.wait();
+                    const txId = txReceipt.logs[0].data;
+
+                    await timelock.confirm(txId);
+                    await timelock.connect(acc2).confirm(txId);
+                    await timelock.connect(acc3).confirm(txId);
+
+                    await time.increase(60);
+
+                    await expect(timelock.execute(
+                        ethers.constants.AddressZero,
+                        "demo(string)",
+                        DATA_VALUE,
+                        1000,
+                        nextTimestamp,
+                        { value: ethers.utils.parseEther("0.5") }
+                    )).to.be.revertedWith('Invalid target');
+                });
         })
 
         describe("cancelConfirmation", function () {
@@ -478,6 +525,22 @@ describe("TimeLock", function () {
                 await expect(timelock.cancelConfirmation(txId))
                     .to.be.revertedWith('Not confirmed!');
             })
+
+            it("Verify only owner can cancel confirmation", async function () {
+                const { acc4, timelock } = await loadFixture(deployTimeLockFixture);
+                const nextTimestamp = (await time.latest()) + 60;
+                const tx = await timelock.addToQueue(
+                    timelock.address,
+                    "demo(string)",
+                    DATA_VALUE,
+                    1000,
+                    nextTimestamp
+                );
+                const txReceipt = await tx.wait();
+                const txId = txReceipt.logs[0].data;
+                await timelock.confirm(txId);
+                await expect(timelock.connect(acc4).cancelConfirmation(txId)).to.be.revertedWith('Not an owner!');
+            });
         })
 
         describe("discard", function () {
@@ -500,6 +563,21 @@ describe("TimeLock", function () {
                 await expect(timelock.discard(txId))
                     .to.emit(timelock, 'Discarded');
             })
+
+            it("Verify only owner can discard transaction", async function () {
+                const { acc4, timelock } = await loadFixture(deployTimeLockFixture);
+                const nextTimestamp = (await time.latest()) + 60;
+                const tx = await timelock.addToQueue(
+                    timelock.address,
+                    "demo(string)",
+                    DATA_VALUE,
+                    1000,
+                    nextTimestamp
+                );
+                const txReceipt = await tx.wait();
+                const txId = txReceipt.logs[0].data;
+                await expect(timelock.connect(acc4).discard(txId)).to.be.revertedWith('Not an owner!');
+            });
         })
 
         it("Verify only queued transaction can be discarded", async function () {
@@ -508,5 +586,27 @@ describe("TimeLock", function () {
             await expect(timelock.discard('0xa6cc05b415758ffca81a29998f7815b735be3d80d2546b7dc1afb6c19ddf3b48'))
                 .to.be.revertedWith('Not queued!');
         })
+
+        it("Verify non-owner cannot execute transaction (branch coverage)", async function () {
+            const { acc4, timelock } = await loadFixture(deployTimeLockFixture);
+            const nextTimestamp = (await time.latest()) + 60;
+            const tx = await timelock.addToQueue(
+                timelock.address,
+                "demo(string)",
+                DATA_VALUE,
+                1000,
+                nextTimestamp
+            );
+            const txReceipt = await tx.wait();
+            await timelock.confirm(txReceipt.logs[0].data);
+            await expect(timelock.connect(acc4).execute(
+                timelock.address,
+                "demo(string)",
+                DATA_VALUE,
+                1000,
+                nextTimestamp,
+                { value: ethers.utils.parseEther("0.5") }
+            )).to.be.revertedWith('Not an owner!');
+        });
     })
 })

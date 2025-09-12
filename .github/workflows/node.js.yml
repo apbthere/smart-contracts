@@ -42,3 +42,7 @@ jobs:
       run: slither contracts/ --solc-remaps '@openzeppelin=node_modules/@openzeppelin' --filter-paths 'node_modules/@openzeppelin' --exclude block-timestamp
     - name: Run Tests
       run: npx hardhat test
+    - name: Install solidity-coverage
+      run: npm install --save-dev solidity-coverage
+    - name: Run Coverage
+      run: npx hardhat coverage

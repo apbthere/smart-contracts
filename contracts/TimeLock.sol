@@ -1,7 +1,10 @@
 
 // SPDX-License-Identifier: MIT
 
+
 pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/utils/Address.sol";
 
 contract TimeLock {
     uint internal constant MINIMUM_DELAY = 10;
@@ -65,6 +68,9 @@ contract TimeLock {
             "Invalid timestamp"
         );
         bytes32 txId = keccak256(abi.encode(
+            // SECURITY: Timestamp comparisons can be manipulated by miners within a small range.
+            // For timelock contracts, using block.timestamp is standard, but delays (MINIMUM_DELAY, MAXIMUM_DELAY)
+            // should be set long enough to make manipulation impractical. See Slither warning.
             to,
             funcName,
             data,
@@ -119,6 +125,9 @@ contract TimeLock {
         require(
             block.timestamp > timestamp,
             "too early"
+            // SECURITY: Timestamp comparisons can be manipulated by miners within a small range.
+            // For timelock contracts, using block.timestamp is standard, but delays and grace periods
+            // should be set long enough to make manipulation impractical. See Slither warning.
         );
         require(
             timestamp + GRACE_PERIOD > block.timestamp,
@@ -155,9 +164,7 @@ contract TimeLock {
 
         emit Executed(txId);
 
-        (bool success, bytes memory resp) = to.call{value: value}(callData);
-        require(success, "Call failed");
-        
+        bytes memory resp = Address.functionCallWithValue(to, callData, value, "Call failed");
         return resp;
     }
 

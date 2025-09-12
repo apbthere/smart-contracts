@@ -13,25 +13,25 @@ contract CommitReveal is Ownable {
 
     enum Moves {None, Rock, Paper, Scissors}
    
-    function commitVote(bytes32 _hashedVote) external {
+    function commitVote(bytes32 hashedVote) external {
         require(!votingStopped);
         require(commits[msg.sender] == bytes32(0));
 
-        commits[msg.sender] = _hashedVote;
+        commits[msg.sender] = hashedVote;
 
-        emit CommitmentMade(_hashedVote);
+        emit CommitmentMade(hashedVote);
     }
 
-    function revealVote(Moves _move, bytes32 _secret) external {
+    function revealVote(Moves move, bytes32 secret) external {
         require(votingStopped);
 
-        bytes32 commit = keccak256(abi.encodePacked(_move, _secret, msg.sender));
+        bytes32 commit = keccak256(abi.encodePacked(move, secret, msg.sender));
 
         require(commit == commits[msg.sender]);
 
         delete commits[msg.sender];
 
-        votes[msg.sender] = _move;
+        votes[msg.sender] = move;
 
         emit Reveal(msg.sender, votes[msg.sender]);
     }
@@ -41,7 +41,7 @@ contract CommitReveal is Ownable {
         votingStopped = true;
     }
 
-    function getCommit(address _address) public view returns (bytes32) {
-        return commits[_address];
+    function getCommit(address voterAddress) public view returns (bytes32) {
+        return commits[voterAddress];
     }
 }

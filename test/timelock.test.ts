@@ -396,6 +396,38 @@ describe("TimeLock", function () {
                     { value: ethers.utils.parseEther("0.5") }
                 )).to.be.revertedWith('Call failed');
             })
+            it("Verify transaction emits Executed event", async function () {
+                const { acc2, acc3, timelock } = await loadFixture(deployTimeLockFixture);
+
+                const nextTimestamp = (await time.latest()) + 60;
+
+                const tx = (await timelock.addToQueue(
+                    timelock.address,
+                    "demo(string)",
+                    DATA_VALUE,
+                    1000,
+                    nextTimestamp
+                ));
+
+                const txReceipt = await tx.wait();
+                const txId = txReceipt.logs[0].data;
+
+                await timelock.confirm(txId);
+                await timelock.connect(acc2).confirm(txId);
+                await timelock.connect(acc3).confirm(txId);
+
+                // We can increase the time in Hardhat Network
+                await time.increase(60);
+
+                await expect(timelock.execute(
+                    timelock.address,
+                    "demo(string)",
+                    DATA_VALUE,
+                    1000,
+                    nextTimestamp,
+                    { value: ethers.utils.parseEther("0.5") }
+                )).to.emit(timelock, 'Executed');
+            })
         })
 
         describe("cancelConfirmation", function () {

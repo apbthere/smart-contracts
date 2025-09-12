@@ -47,29 +47,29 @@ contract TimeLock {
         }
     }
 
-    function demo(string calldata _msg) external payable {
-        message = _msg;
+    function demo(string calldata inputMsg) external payable {
+        message = inputMsg;
         amount = msg.value;
     }
 
     function addToQueue(
-        address _to,
-        string calldata _func,
-        bytes calldata _data,
-        uint _value,
-        uint _timestamp
+        address to,
+        string calldata funcName,
+        bytes calldata data,
+        uint value,
+        uint timestamp
     ) external onlyOwner returns(bytes32) {
         require(
-            _timestamp > block.timestamp + MINIMUM_DELAY &&
-            _timestamp < block.timestamp + MAXIMUM_DELAY,
+            timestamp > block.timestamp + MINIMUM_DELAY &&
+            timestamp < block.timestamp + MAXIMUM_DELAY,
             "Invalid timestamp"
         );
         bytes32 txId = keccak256(abi.encode(
-            _to,
-            _func,
-            _data,
-            _value,
-            _timestamp
+            to,
+            funcName,
+            data,
+            value,
+            timestamp
         ));
 
         require(!queue[txId], "Already queued");
@@ -87,48 +87,50 @@ contract TimeLock {
         return txId;
     }
 
-    function confirm(bytes32 _txId) external onlyOwner {
-        require(queue[_txId], "Not queued!");
-        require(!confirmations[_txId][msg.sender], "Already confirmed!");
+    function confirm(bytes32 txId) external onlyOwner {
+        require(queue[txId], "Not queued!");
+        require(!confirmations[txId][msg.sender], "Already confirmed!");
 
-        Transaction storage transaction = txs[_txId];
+        Transaction storage transaction = txs[txId];
 
         transaction.confirmations++;
-        confirmations[_txId][msg.sender] = true;
+        confirmations[txId][msg.sender] = true;
     }
 
 
-    function cancelConfirmation(bytes32 _txId) external onlyOwner {
-        require(queue[_txId], "Not queued!");
-        require(confirmations[_txId][msg.sender], "Not confirmed!");
+    function cancelConfirmation(bytes32 txId) external onlyOwner {
+        require(queue[txId], "Not queued!");
+        require(confirmations[txId][msg.sender], "Not confirmed!");
 
-        Transaction storage transaction = txs[_txId];
+        Transaction storage transaction = txs[txId];
         transaction.confirmations--;
-        confirmations[_txId][msg.sender] = false;
+        confirmations[txId][msg.sender] = false;
     }
 
     function execute(
-        address _to,
-        string calldata _func,
-        bytes calldata _data,
-        uint _value,
-        uint _timestamp
+        address to,
+        string calldata funcName,
+        bytes calldata data,
+        uint value,
+        uint timestamp
     ) external payable onlyOwner returns(bytes memory) {
+        require(to != address(0), "Invalid target");
+
         require(
-            block.timestamp > _timestamp,
+            block.timestamp > timestamp,
             "too early"
         );
         require(
-            _timestamp + GRACE_PERIOD > block.timestamp,
+            timestamp + GRACE_PERIOD > block.timestamp,
             "tx expired"
         );
 
         bytes32 txId = keccak256(abi.encode(
-            _to,
-            _func,
-            _data,
-            _value,
-            _timestamp
+            to,
+            funcName,
+            data,
+            value,
+            timestamp
         ));
 
         require(queue[txId], "Not queued!");
@@ -141,28 +143,29 @@ contract TimeLock {
 
         transaction.executed = true;
 
-        bytes memory data;
-        if(bytes(_func).length > 0) {
-            data = abi.encodePacked(
-                bytes4(keccak256(bytes(_func))),
-                _data
+        bytes memory callData;
+        if(bytes(funcName).length > 0) {
+            callData = abi.encodePacked(
+                bytes4(keccak256(bytes(funcName))),
+                data
             );
         } else {
-            data = _data;
+            callData = data;
         }
 
-        (bool success, bytes memory resp) = _to.call{value: _value}(data);
-        require(success, "Call failed");
-
         emit Executed(txId);
+
+        (bool success, bytes memory resp) = to.call{value: value}(callData);
+        require(success, "Call failed");
+        
         return resp;
     }
 
-    function discard(bytes32 _txId) external onlyOwner {
-        require(queue[_txId], "Not queued!");
+    function discard(bytes32 txId) external onlyOwner {
+        require(queue[txId], "Not queued!");
 
-        delete queue[_txId];
+        delete queue[txId];
 
-        emit Discarded(_txId);
+        emit Discarded(txId);
     }
 }
